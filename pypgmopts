@@ -22,6 +22,7 @@
 
 import sys
 import os
+import datetime
 import textwrap
 import collections
 import importlib.util
@@ -125,6 +126,7 @@ class CodeGenerator(object):
 			"min_pos":								self.min_positional_arguments,
 			"max_pos":								self.max_positional_arguments,
 			"have_flexible_positional_argument":	self.have_flexible_positional_argument,
+			"now":									datetime.datetime.now(),
 		}
 
 		for suffix in [ ".c", ".h" ]:

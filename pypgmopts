@@ -118,7 +118,7 @@ class CodeGenerator(object):
 			print(option)
 
 	def run(self):
-		lookup = mako.lookup.TemplateLookup([ "." ], strict_undefined = True)
+		lookup = mako.lookup.TemplateLookup([ ".", os.path.dirname(sys.argv[0]) ], strict_undefined = True)
 		args = {
 			"opts":									self._options,
 			"short_opts_string":					self.short_opts_string,

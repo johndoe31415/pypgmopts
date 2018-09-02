@@ -29,18 +29,52 @@ import mako.lookup
 from FriendlyArgumentParser import FriendlyArgumentParser
 
 class CodeGenerator(object):
-	_Option = collections.namedtuple("Option", [ "name", "requires_parameter", "opt_short", "opt_long" ])
+	_Option = collections.namedtuple("Option", [ "name", "requires_parameter", "opt_short", "opt_long", "positional", "nargs" ])
 
 	def __init__(self, args):
 		self._args = args
 		self._parser = self._load_submodule()
 		self._options = self._parse_parser()
 
+	@property
+	def have_flexible_positional_argument(self):
+		return any(option.nargs is not None for option in self._options)
+
+	@property
+	def min_positional_arguments(self):
+		min_pos = 0
+		for option in self._options:
+			if option.positional:
+				if option.nargs is None:
+					min_pos += 1
+				elif option.nargs == "+":
+					min_pos += 1
+				elif option.nargs == "*":
+					pass
+				else:
+					raise Exception("Unsupported 'nargs' argument \"%s\"." % (option.nargs))
+		return min_pos
+	
+	@property
+	def max_positional_arguments(self):
+		max_pos = 0
+		for option in self._options:
+			if option.positional:
+				if option.nargs is None:
+					max_pos += 1
+				elif option.nargs in [ "+", "*" ]:
+					return None
+				else:
+					raise Exception("Unsupported 'nargs' argument \"%s\"." % (option.nargs))
+		return max_pos
+
 	def _parse_parser(self):
 		options = [ ]
 		for action in self._parser._actions:
 			opt_short = None
 			opt_long = None
+			positional = False
+			nargs = None			
 			for option in action.option_strings:
 				if option.startswith("--"):
 					# Long options
@@ -51,7 +85,13 @@ class CodeGenerator(object):
 				else:
 					raise Exception("Unknown option: '%s'." % (option))
 
-			option = self._Option(name = action.dest, requires_parameter = (action.nargs != 0), opt_short = opt_short, opt_long = opt_long)
+			if len(action.option_strings) == 0:
+				# Positional argument
+				positional = True
+				nargs = action.nargs
+				opt_long = action.dest
+
+			option = self._Option(name = action.dest, requires_parameter = (action.nargs != 0), opt_short = opt_short, opt_long = opt_long, positional = positional, nargs = nargs)
 			options.append(option)
 		return options
 
@@ -71,12 +111,20 @@ class CodeGenerator(object):
 					string += ":"
 		return string
 
+	def dump(self):
+		print("Positional arguments: %s to %s" % (self.min_positional_arguments, self.max_positional_arguments))
+		for option in self._options:
+			print(option)
+
 	def run(self):
 		lookup = mako.lookup.TemplateLookup([ "." ], strict_undefined = True)
 		args = {
-			"opts":					self._options,
-			"short_opts_string":	self.short_opts_string,
-			"help_text":			self._parser.format_help().rstrip("\r\n").split("\n"),
+			"opts":									self._options,
+			"short_opts_string":					self.short_opts_string,
+			"help_text":							self._parser.format_help().rstrip("\r\n").split("\n"),
+			"min_pos":								self.min_positional_arguments,
+			"max_pos":								self.max_positional_arguments,
+			"have_flexible_positional_argument":	self.have_flexible_positional_argument,
 		}
 
 		for suffix in [ ".c", ".h" ]:
@@ -87,7 +135,11 @@ class CodeGenerator(object):
 
 
 parser = FriendlyArgumentParser(prog = "getoptgen", description = "getoptgen - Generate getopt-style C code from Python argparse", add_help = False)
+parser.add_argument("-v", "--verbose", action = "store_true", help = "Be more verbose.")
 parser.add_argument("parser", type = str, help = "Python code which contains the parser definition.")
 args = parser.parse_args(sys.argv[1:])
-CodeGenerator(args).run()
 
+codegen = CodeGenerator(args)
+if args.verbose:
+	codegen.dump()
+codegen.run()

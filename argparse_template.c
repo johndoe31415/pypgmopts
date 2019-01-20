@@ -76,6 +76,7 @@ bool argparse_parse(int argc, char **argv, argparse_callback_t argument_callback
 	}
 %endif
 
+%if any(opt.positional for opt in opts):
 	int positional_index = optind;
 %for opt in [ opt for opt in opts if opt.positional ]:
 	%if opt.nargs is None:
@@ -91,6 +92,7 @@ bool argparse_parse(int argc, char **argv, argparse_callback_t argument_callback
 	%endif
 %endfor
 
+%endif
 	return true;
 }
 

@@ -13,16 +13,27 @@
 
 #include <stdbool.h>
 
+%for opt in opts:
+%if type(opt.default) == int:
+#define ARGPARSE_DEFAULT_${opt.name.upper()}		${opt.default}
+%elif type(opt.default) == str:
+#define ARGPARSE_DEFAULT_${opt.name.upper()}		"${opt.default.replace("\"", "\\\"")}"
+%elif type(opt.default) == float:
+#define ARGPARSE_DEFAULT_${opt.name.upper()}		%.5e
+%endif
+%endfor
+
 enum argparse_option_t {
 %for opt in opts:
 	ARG_${opt.name.upper()},
 %endfor
 };
 
-typedef bool (*argparse_callback_t)(enum argparse_option_t option, const char *value);
+typedef void (*argparse_errmsg_callback_t)(const char *errmsg, ...);
+typedef bool (*argparse_callback_t)(enum argparse_option_t option, const char *value, argparse_errmsg_callback_t errmsg_callback);
 
 bool argparse_parse(int argc, char **argv, argparse_callback_t argument_callback);
 void argparse_show_syntax(void);
-void argparse_parse_or_die(int argc, char **argv, argparse_callback_t argument_callback);
+void argparse_parse_or_quit(int argc, char **argv, argparse_callback_t argument_callback);
 
 #endif

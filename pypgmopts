@@ -30,7 +30,7 @@ import mako.lookup
 from FriendlyArgumentParser import FriendlyArgumentParser
 
 class CodeGenerator(object):
-	_Option = collections.namedtuple("Option", [ "name", "requires_parameter", "opt_short", "opt_long", "positional", "nargs" ])
+	_Option = collections.namedtuple("Option", [ "name", "requires_parameter", "opt_short", "opt_long", "opt_text", "positional", "nargs", "default" ])
 
 	def __init__(self, args):
 		self._args = args
@@ -55,7 +55,7 @@ class CodeGenerator(object):
 				else:
 					raise Exception("Unsupported 'nargs' argument \"%s\"." % (option.nargs))
 		return min_pos
-	
+
 	@property
 	def max_positional_arguments(self):
 		max_pos = 0
@@ -75,7 +75,8 @@ class CodeGenerator(object):
 			opt_short = None
 			opt_long = None
 			positional = False
-			nargs = None			
+			nargs = None
+			default = action.default
 			for option in action.option_strings:
 				if option.startswith("--"):
 					# Long options
@@ -92,7 +93,17 @@ class CodeGenerator(object):
 				nargs = action.nargs
 				opt_long = action.dest
 
-			option = self._Option(name = action.dest, requires_parameter = (action.nargs != 0), opt_short = opt_short, opt_long = opt_long, positional = positional, nargs = nargs)
+			opt_text = [ ]
+			if opt_short is not None:
+				opt_text.append("-" + opt_short)
+			if opt_long is not None:
+				if not positional:
+					opt_text.append("--" + opt_long)
+				else:
+					opt_text.append(opt_long)
+			opt_text = " / ".join(opt_text)
+
+			option = self._Option(name = action.dest, requires_parameter = (action.nargs != 0), opt_short = opt_short, opt_long = opt_long, opt_text = opt_text, positional = positional, nargs = nargs, default = default)
 			options.append(option)
 		return options
 

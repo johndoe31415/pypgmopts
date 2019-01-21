@@ -14,7 +14,16 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <stdarg.h>
 #include "argparse.h"
+
+static enum argparse_option_t last_parsed_option;
+static char last_error_message[256];
+static const char *option_texts[] = {
+%for opt in opts:
+	[ARG_${opt.name.upper()}] = "${opt.opt_text}",
+%endfor
+};
 
 enum argparse_option_internal_t {
 %for opt in [ opt for opt in opts if opt.opt_short is not None ]:
@@ -24,6 +33,13 @@ enum argparse_option_internal_t {
 	ARG_${opt.name.upper()}_LONG = ${oid},
 %endfor
 };
+
+static void errmsg_callback(const char *errmsg, ...) {
+	va_list ap;
+	va_start(ap, errmsg);
+	vsnprintf(last_error_message, sizeof(last_error_message), errmsg, ap);
+	va_end(ap);
+}
 
 bool argparse_parse(int argc, char **argv, argparse_callback_t argument_callback) {
 	const char *short_options = "${short_opts_string}";
@@ -39,6 +55,7 @@ bool argparse_parse(int argc, char **argv, argparse_callback_t argument_callback
 		if (optval == -1) {
 			break;
 		}
+		last_error_message[0] = 0;
 		enum argparse_option_internal_t arg = (enum argparse_option_internal_t)optval;
 		switch (arg) {
 %for opt in [ opt for opt in opts if not opt.positional ]:
@@ -48,7 +65,8 @@ bool argparse_parse(int argc, char **argv, argparse_callback_t argument_callback
 %if opt.opt_long is not None:
 			case ARG_${opt.name.upper()}_LONG:
 %endif
-				if (!argument_callback(ARG_${opt.name.upper()}, optarg)) {
+				last_parsed_option = ARG_${opt.name.upper()};
+				if (!argument_callback(ARG_${opt.name.upper()}, optarg, errmsg_callback)) {
 					return false;
 				}
 				break;
@@ -79,13 +97,14 @@ bool argparse_parse(int argc, char **argv, argparse_callback_t argument_callback
 %if any(opt.positional for opt in opts):
 	int positional_index = optind;
 %for opt in [ opt for opt in opts if opt.positional ]:
+	last_parsed_option = ARG_${opt.name.upper()};
 	%if opt.nargs is None:
-	if (!argument_callback(ARG_${opt.name.upper()}, argv[positional_index++])) {
+	if (!argument_callback(ARG_${opt.name.upper()}, argv[positional_index++], errmsg_callback)) {
 		return false;
 	}
 	%else:
 	for (int i = 0; i < flexible_positional_args_cnt; i++) {
-		if (!argument_callback(ARG_${opt.name.upper()}, argv[positional_index++])) {
+		if (!argument_callback(ARG_${opt.name.upper()}, argv[positional_index++], errmsg_callback)) {
 			return false;
 		}
 	}
@@ -102,8 +121,11 @@ void argparse_show_syntax(void) {
 %endfor
 }
 
-void argparse_parse_or_die(int argc, char **argv, argparse_callback_t argument_callback) {
+void argparse_parse_or_quit(int argc, char **argv, argparse_callback_t argument_callback) {
 	if (!argparse_parse(argc, argv, argument_callback)) {
+		if (last_error_message[0]) {
+			fprintf(stderr, "%s: error parsing argument %s -- %s\n", argv[0], option_texts[last_parsed_option], last_error_message);
+		}
 		argparse_show_syntax();
 		exit(EXIT_FAILURE);
 	}
@@ -116,21 +138,19 @@ void argparse_parse_or_die(int argc, char **argv, argparse_callback_t argument_c
 static const char *option_enum_to_str(enum argparse_option_t option) {
 	switch (option) {
 %for opt in opts:
-%if opt.opt_long is not None:
 		case ARG_${opt.name.upper()}: return "ARG_${opt.name.upper()}";
-%endif
 %endfor
 	}
 	return "UNKNOWN";
 }
 
-bool arg_print_callback(enum argparse_option_t option, const char *value) {
+bool arg_print_callback(enum argparse_option_t option, const char *value, argparse_errmsg_callback_t errmsg_callback) {
 	fprintf(stderr, "%s = \"%s\"\n", option_enum_to_str(option), value);
 	return true;
 }
 
 int main(int argc, char **argv) {
-	argparse_parse_or_die(argc, argv, arg_print_callback);
+	argparse_parse_or_quit(argc, argv, arg_print_callback);
 	return 0;
 }
 #endif

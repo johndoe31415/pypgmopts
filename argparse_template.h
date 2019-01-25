@@ -30,8 +30,9 @@ enum argparse_option_t {
 };
 
 typedef void (*argparse_errmsg_callback_t)(const char *errmsg, ...);
+typedef void (*argparse_errmsg_option_callback_t)(enum argparse_option_t error_option, const char *errmsg, ...);
 typedef bool (*argparse_callback_t)(enum argparse_option_t option, const char *value, argparse_errmsg_callback_t errmsg_callback);
-typedef bool (*argparse_plausibilization_callback_t)(enum argparse_option_t option, argparse_errmsg_callback_t errmsg_callback);
+typedef bool (*argparse_plausibilization_callback_t)(argparse_errmsg_option_callback_t errmsg_callback);
 
 bool argparse_parse(int argc, char **argv, argparse_callback_t argument_callback, argparse_plausibilization_callback_t plausibilization_callback);
 void argparse_show_syntax(void);

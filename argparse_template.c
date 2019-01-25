@@ -42,6 +42,15 @@ static void errmsg_callback(const char *errmsg, ...) {
 	va_end(ap);
 }
 
+static void errmsg_option_callback(enum argparse_option_t error_option, const char *errmsg, ...) {
+	last_parsed_option = error_option;
+
+	va_list ap;
+	va_start(ap, errmsg);
+	vsnprintf(last_error_message, sizeof(last_error_message), errmsg, ap);
+	va_end(ap);
+}
+
 bool argparse_parse(int argc, char **argv, argparse_callback_t argument_callback, argparse_plausibilization_callback_t plausibilization_callback) {
 	const char *short_options = "${short_opts_string}";
 	struct option long_options[] = {
@@ -115,12 +124,9 @@ bool argparse_parse(int argc, char **argv, argparse_callback_t argument_callback
 
 %endif
 	if (plausibilization_callback) {
-%for opt in opts:
-		last_parsed_option = ARG_${opt.name.upper()};
-		if (!plausibilization_callback(last_parsed_option, errmsg_callback)) {
+		if (!plausibilization_callback(errmsg_option_callback)) {
 			return false;
 		}
-%endfor
 	}
 	return true;
 }

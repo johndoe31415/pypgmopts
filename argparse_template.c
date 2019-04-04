@@ -52,6 +52,7 @@ static void errmsg_option_callback(enum argparse_option_t error_option, const ch
 }
 
 bool argparse_parse(int argc, char **argv, argparse_callback_t argument_callback, argparse_plausibilization_callback_t plausibilization_callback) {
+	last_parsed_option = ARGPARSE_NO_OPTION;
 	const char *short_options = "${short_opts_string}";
 	struct option long_options[] = {
 	%for opt in [ opt for opt in opts if opt.opt_long is not None ]:
@@ -83,7 +84,8 @@ bool argparse_parse(int argc, char **argv, argparse_callback_t argument_callback
 
 %endfor
 			default:
-				errmsg_callback("internal error / default switch path taken");
+				last_parsed_option = ARGPARSE_NO_OPTION;
+				errmsg_callback("unrecognized option supplied");
 				return false;
 		}
 	}
@@ -139,10 +141,12 @@ void argparse_show_syntax(void) {
 
 void argparse_parse_or_quit(int argc, char **argv, argparse_callback_t argument_callback, argparse_plausibilization_callback_t plausibilization_callback) {
 	if (!argparse_parse(argc, argv, argument_callback, plausibilization_callback)) {
-		if (last_error_message[0]) {
-			fprintf(stderr, "%s: error parsing argument %s -- %s\n", argv[0], option_texts[last_parsed_option], last_error_message);
-		} else {
-			fprintf(stderr, "%s: error parsing argument %s -- no details available\n", argv[0], option_texts[last_parsed_option]);
+		if (last_parsed_option != ARGPARSE_NO_OPTION) {
+			if (last_error_message[0]) {
+				fprintf(stderr, "%s: error parsing argument %s -- %s\n", argv[0], option_texts[last_parsed_option], last_error_message);
+			} else {
+				fprintf(stderr, "%s: error parsing argument %s -- no details available\n", argv[0], option_texts[last_parsed_option]);
+			}
 		}
 		argparse_show_syntax();
 		exit(EXIT_FAILURE);

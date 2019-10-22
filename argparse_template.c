@@ -94,17 +94,25 @@ bool argparse${name_suffix}_parse(int argc, char **argv, argparse${name_suffix}_
 %if have_flexible_positional_argument:
 	const int flexible_positional_args_cnt = positional_argument_cnt - ${sum(1 for opt in opts if (opt.positional and (opt.nargs is None)))};
 %endif
+	last_parsed_option = ARGPARSE${name_suffix.upper()}_POSITIONAL_ARG;
+%if (min_pos is not None) and (max_pos is not None) and (min_pos == max_pos):
+	if (positional_argument_cnt != ${min_pos}) {
+		errmsg_callback("expected exactly ${min_pos} positional argument${"" if (min_pos == 1) else "s"}, but %d given.", positional_argument_cnt);
+		return false;
+	}
+%else:
 %if min_pos is not None:
 	if (positional_argument_cnt < ${min_pos}) {
-		errmsg_callback("expected a minimum of ${min_pos} positional arguments, %d given.", positional_argument_cnt);
+		errmsg_callback("expected a minimum of ${min_pos} positional argument${"" if (min_pos == 1) else "s"}, but %d given.", positional_argument_cnt);
 		return false;
 	}
 %endif
 %if max_pos is not None:
 	if (positional_argument_cnt > ${max_pos}) {
-		errmsg_callback("expected a maximum of ${max_pos} positional arguments, %d given.", positional_argument_cnt);
+		errmsg_callback("expected a maximum of ${max_pos} positional argument${"" if (max_pos == 1) else "s"}, but %d given.", positional_argument_cnt);
 		return false;
 	}
+%endif
 %endif
 
 %if any(opt.positional for opt in opts):
@@ -141,12 +149,14 @@ void argparse${name_suffix}_show_syntax(void) {
 
 void argparse${name_suffix}_parse_or_quit(int argc, char **argv, argparse${name_suffix}_callback_t argument_callback, argparse${name_suffix}_plausibilization_callback_t plausibilization_callback) {
 	if (!argparse${name_suffix}_parse(argc, argv, argument_callback, plausibilization_callback)) {
-		if (last_parsed_option != ARGPARSE${name_suffix.upper()}_NO_OPTION) {
+		if (last_parsed_option > ARGPARSE${name_suffix.upper()}_POSITIONAL_ARG) {
 			if (last_error_message[0]) {
 				fprintf(stderr, "${pgmname}: error parsing argument %s -- %s\n", option_texts[last_parsed_option], last_error_message);
 			} else {
 				fprintf(stderr, "${pgmname}: error parsing argument %s -- no details available\n", option_texts[last_parsed_option]);
 			}
+		} else if (last_parsed_option == ARGPARSE${name_suffix.upper()}_POSITIONAL_ARG) {
+			fprintf(stderr, "${pgmname}: error parsing optional arguments -- %s\n", last_error_message);
 		}
 		argparse${name_suffix}_show_syntax();
 		exit(EXIT_FAILURE);

@@ -24,9 +24,10 @@
 %endfor
 
 #define ARGPARSE${name_suffix.upper()}_NO_OPTION		0
+#define ARGPARSE${name_suffix.upper()}_POSITIONAL_ARG	1
 
 enum argparse${name_suffix}_option_t {
-%for (value, opt) in enumerate(opts, 1):
+%for (value, opt) in enumerate(opts, 2):
 	ARG${name_suffix.upper()}_${opt.name.upper()} = ${value},
 %endfor
 };

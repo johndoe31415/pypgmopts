@@ -50,7 +50,7 @@ class CodeGenerator(object):
 					min_pos += 1
 				elif option.nargs == "+":
 					min_pos += 1
-				elif option.nargs == "*":
+				elif option.nargs in [ "*", "?" ]:
 					pass
 				else:
 					raise Exception("Unsupported 'nargs' argument \"%s\"." % (option.nargs))
@@ -62,6 +62,8 @@ class CodeGenerator(object):
 		for option in self._options:
 			if option.positional:
 				if option.nargs is None:
+					max_pos += 1
+				elif option.nargs == "?":
 					max_pos += 1
 				elif option.nargs in [ "+", "*" ]:
 					return None

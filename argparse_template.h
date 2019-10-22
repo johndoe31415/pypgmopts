@@ -8,38 +8,36 @@
  *   Generated at: ${now.strftime("%Y-%m-%d %H:%M:%S")}
  */
 
-#ifndef __ARGPARSE_H__
-#define __ARGPARSE_H__
+#ifndef __ARGPARSE${name_suffix.upper()}_H__
+#define __ARGPARSE${name_suffix.upper()}_H__
 
 #include <stdbool.h>
 
 %for opt in opts:
 %if type(opt.default) == int:
-#define ARGPARSE_DEFAULT_${opt.name.upper()}		${opt.default}
+#define ARGPARSE${name_suffix.upper()}_DEFAULT_${opt.name.upper()}		${opt.default}
 %elif type(opt.default) == str:
-#define ARGPARSE_DEFAULT_${opt.name.upper()}		"${opt.default.replace("\"", "\\\"")}"
+#define ARGPARSE${name_suffix.upper()}_DEFAULT_${opt.name.upper()}		"${opt.default.replace("\"", "\\\"")}"
 %elif type(opt.default) == float:
-#define ARGPARSE_DEFAULT_${opt.name.upper()}		%.5e
+#define ARGPARSE${name_suffix.upper()}_DEFAULT_${opt.name.upper()}		%.5e
 %endif
 %endfor
 
-#define ARGPARSE_NO_OPTION		0
+#define ARGPARSE${name_suffix.upper()}_NO_OPTION		0
 
-enum argparse_option_t {
+enum argparse${name_suffix}_option_t {
 %for (value, opt) in enumerate(opts, 1):
-	ARG_${opt.name.upper()} = ${value},
+	ARG${name_suffix.upper()}_${opt.name.upper()} = ${value},
 %endfor
 };
 
-typedef void (*argparse_errmsg_callback_t)(const char *errmsg, ...);
-typedef void (*argparse_errmsg_option_callback_t)(enum argparse_option_t error_option, const char *errmsg, ...);
-typedef bool (*argparse_callback_t)(enum argparse_option_t option, const char *value, argparse_errmsg_callback_t errmsg_callback);
-typedef bool (*argparse_plausibilization_callback_t)(argparse_errmsg_option_callback_t errmsg_callback);
+typedef void (*argparse${name_suffix}_errmsg_callback_t)(const char *errmsg, ...);
+typedef void (*argparse${name_suffix}_errmsg_option_callback_t)(enum argparse${name_suffix}_option_t error_option, const char *errmsg, ...);
+typedef bool (*argparse${name_suffix}_callback_t)(enum argparse${name_suffix}_option_t option, const char *value, argparse${name_suffix}_errmsg_callback_t errmsg_callback);
+typedef bool (*argparse${name_suffix}_plausibilization_callback_t)(argparse${name_suffix}_errmsg_option_callback_t errmsg_callback);
 
-bool argparse_parse(int argc, char **argv, argparse_callback_t argument_callback, argparse_plausibilization_callback_t plausibilization_callback);
-void argparse_show_syntax(void);
-void argparse_parse_or_quit(int argc, char **argv, argparse_callback_t argument_callback, argparse_plausibilization_callback_t plausibilization_callback);
-
-bool argparse_argument_one_of_choices(const char *value, const char **value_list);
+bool argparse${name_suffix}_parse(int argc, char **argv, argparse${name_suffix}_callback_t argument_callback, argparse${name_suffix}_plausibilization_callback_t plausibilization_callback);
+void argparse${name_suffix}_show_syntax(void);
+void argparse${name_suffix}_parse_or_quit(int argc, char **argv, argparse${name_suffix}_callback_t argument_callback, argparse${name_suffix}_plausibilization_callback_t plausibilization_callback);
 
 #endif

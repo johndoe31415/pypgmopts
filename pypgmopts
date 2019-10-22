@@ -138,16 +138,19 @@ class CodeGenerator(object):
 			"max_pos":								self.max_positional_arguments,
 			"have_flexible_positional_argument":	self.have_flexible_positional_argument,
 			"now":									datetime.datetime.now(),
+			"name_suffix":							"" if (self._args.name is None) else ("_" + self._args.name),
+			"pgmname":								self._parser.prog,
 		}
 
-		for suffix in [ ".c", ".h" ]:
-			template = lookup.get_template("argparse_template" + suffix)
+		for file_suffix in [ ".c", ".h" ]:
+			template = lookup.get_template("argparse_template" + file_suffix)
 			result = template.render(**args)
-			with open("argparse" + suffix, "w") as f:
+			filename = "argparse" + args["name_suffix"] + file_suffix
+			with open(filename, "w") as f:
 				f.write(result)
 
-
 parser = FriendlyArgumentParser(prog = "getoptgen", description = "getoptgen - Generate getopt-style C code from Python argparse", add_help = False)
+parser.add_argument("-n", "--name", type = str, help = "Distinguish the generated parser by adding a specific separate name. Can be useful to facilitate multiple parsers in one project.")
 parser.add_argument("-v", "--verbose", action = "store_true", help = "Be more verbose.")
 parser.add_argument("parser", type = str, help = "Python code which contains the parser definition.")
 args = parser.parse_args(sys.argv[1:])

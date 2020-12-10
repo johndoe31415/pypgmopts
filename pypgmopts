@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #	pypgmopts - getopt generator for C
-#	Copyright (C) 2018-2018 Johannes Bauer
+#	Copyright (C) 2018-2020 Johannes Bauer
 #
 #	This file is part of pypgmopts.
 #
@@ -27,14 +27,27 @@ import textwrap
 import collections
 import importlib.util
 import mako.lookup
+import argparse
 from FriendlyArgumentParser import FriendlyArgumentParser
+
+class CustomWidthFormatterClass(argparse.HelpFormatter):
+	_WIDTH = 120
+
+	def __init__(self, prog):
+		argparse.HelpFormatter.__init__(self, prog, width = self._WIDTH)
+
+	@classmethod
+	def set_width(cls, width):
+		cls._WIDTH = width
 
 class CodeGenerator(object):
 	_Option = collections.namedtuple("Option", [ "name", "requires_parameter", "opt_short", "opt_long", "opt_text", "positional", "nargs", "default" ])
 
 	def __init__(self, args):
 		self._args = args
+		CustomWidthFormatterClass.set_width(self._args.terminal_width)
 		self._parser = self._load_submodule()
+		self._parser.formatter_class = CustomWidthFormatterClass
 		self._options = self._parse_parser()
 
 	@property
@@ -132,10 +145,11 @@ class CodeGenerator(object):
 
 	def run(self):
 		lookup = mako.lookup.TemplateLookup([ ".", os.path.dirname(sys.argv[0]) ], strict_undefined = True)
+		help_text = self._parser.format_help().rstrip("\r\n").split("\n")
 		args = {
 			"opts":									self._options,
 			"short_opts_string":					self.short_opts_string,
-			"help_text":							self._parser.format_help().rstrip("\r\n").split("\n"),
+			"help_text":							help_text,
 			"min_pos":								self.min_positional_arguments,
 			"max_pos":								self.max_positional_arguments,
 			"have_flexible_positional_argument":	self.have_flexible_positional_argument,
@@ -152,6 +166,7 @@ class CodeGenerator(object):
 				f.write(result)
 
 parser = FriendlyArgumentParser(prog = "getoptgen", description = "getoptgen - Generate getopt-style C code from Python argparse", add_help = False)
+parser.add_argument("-w", "--terminal-width", type = int, default = 100, help = "Terminal width in characters. Defaults to %(default)d.")
 parser.add_argument("-n", "--name", type = str, help = "Distinguish the generated parser by adding a specific separate name. Can be useful to facilitate multiple parsers in one project.")
 parser.add_argument("-v", "--verbose", action = "store_true", help = "Be more verbose.")
 parser.add_argument("parser", type = str, help = "Python code which contains the parser definition.")
